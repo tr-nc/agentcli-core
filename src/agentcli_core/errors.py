@@ -6,14 +6,16 @@ import click
 import typer
 
 
-def print_error_with_help(exc: click.ClickException, *, prefix: str = "Error") -> None:
+def print_error_with_help(exc: BaseException, *, prefix: str = "Error") -> None:
     """Print a Click exception followed by the relevant command help.
 
     The parse failure is deliberately first so an agent can see what went wrong
     before scanning the grammar/help block.
     """
 
-    click.echo(f"{prefix}: {exc.format_message()}", err=True)
+    format_message = getattr(exc, "format_message", None)
+    message = format_message() if callable(format_message) else str(exc)
+    click.echo(f"{prefix}: {message}", err=True)
     ctx = getattr(exc, "ctx", None)
     if ctx is None:
         return

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Sequence
+from importlib import import_module
 from typing import Any
 
 import click
@@ -11,6 +12,32 @@ from typer.core import TyperGroup
 from .errors import print_error_with_help
 
 HELP_OPTION_NAMES = {"help_option_names": ["-h", "--help"]}
+
+
+def _exception_type(module_name: str, name: str) -> type[BaseException] | None:
+    try:
+        module = import_module(module_name)
+    except ModuleNotFoundError:
+        return None
+    exception_type = getattr(module, name, None)
+    return exception_type if isinstance(exception_type, type) else None
+
+
+def _click_exception_types(name: str) -> tuple[type[BaseException], ...]:
+    types: list[type[BaseException]] = []
+    for exception_type in (
+        getattr(click, name, None),
+        getattr(click.exceptions, name, None),
+        _exception_type("typer._click.exceptions", name),
+    ):
+        if isinstance(exception_type, type) and exception_type not in types:
+            types.append(exception_type)
+    return tuple(types)
+
+
+_CLICK_EXCEPTION_TYPES = _click_exception_types("ClickException")
+_ABORT_TYPES = _click_exception_types("Abort")
+_NO_ARGS_IS_HELP_ERROR_TYPES = _click_exception_types("NoArgsIsHelpError")
 
 
 class AgentFriendlyGroup(TyperGroup):
@@ -55,14 +82,17 @@ class AgentFriendlyGroup(TyperGroup):
                 windows_expand_args=windows_expand_args,
                 **extra,
             )
-        except click.ClickException as exc:
-            if exc.__class__.__name__ == "NoArgsIsHelpError":
+        except _CLICK_EXCEPTION_TYPES as exc:
+            if isinstance(exc, _NO_ARGS_IS_HELP_ERROR_TYPES) or exc.__class__.__name__ == "NoArgsIsHelpError":
                 ctx = getattr(exc, "ctx", None)
-                click.echo(ctx.get_help() if ctx is not None else exc.format_message())
+                format_message = getattr(exc, "format_message", None)
+                fallback = format_message() if callable(format_message) else str(exc)
+                click.echo(ctx.get_help() if ctx is not None else fallback)
                 sys.exit(0)
             print_error_with_help(exc, prefix=self.error_prefix)
-            sys.exit(exc.exit_code)
-        except click.Abort:
+            exit_code = getattr(exc, "exit_code", 2)
+            sys.exit(exit_code if isinstance(exit_code, int) else 2)
+        except _ABORT_TYPES:
             click.echo("Aborted.", err=True)
             sys.exit(1)
 
