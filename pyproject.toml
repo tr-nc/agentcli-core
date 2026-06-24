@@ -1,0 +1,30 @@
+# During rapid local migration, sibling CLIs can depend on this package with:
+#   dependencies = ["agentcli-core"]
+#   [tool.uv.sources]
+#   agentcli-core = { path = "../agentcli-core", editable = true }
+# After the API stabilizes, switch callers to the remote source:
+#   agentcli-core = { git = "ssh://git@github.com/tr-nc/agentcli-core.git" }
+
+[project]
+name = "agentcli-core"
+version = "0.1.0"
+description = "Shared infrastructure for coding-agent-facing Python CLIs"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.0.0",
+    "typer>=0.16.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.14.0",
+]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["uv_build>=0.8.0,<0.10.0"]
+build-backend = "uv_build"
