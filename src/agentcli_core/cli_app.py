@@ -10,6 +10,7 @@ import typer
 from typer.core import TyperGroup
 
 from .errors import print_error_with_help
+from .output import SpooledOutput, output_line_limit, output_spooling_enabled
 
 HELP_OPTION_NAMES = {"help_option_names": ["-h", "--help"]}
 
@@ -53,6 +54,8 @@ class AgentFriendlyGroup(TyperGroup):
     """
 
     error_prefix = "Error"
+    spool_large_output = True
+    output_line_limit = 1000
 
     def main(
         self,
@@ -73,30 +76,34 @@ class AgentFriendlyGroup(TyperGroup):
                 **extra,
             )
 
-        try:
-            result = super().main(
-                args=args,
-                prog_name=prog_name,
-                complete_var=complete_var,
-                standalone_mode=False,
-                windows_expand_args=windows_expand_args,
-                **extra,
-            )
-        except _CLICK_EXCEPTION_TYPES as exc:
-            if isinstance(exc, _NO_ARGS_IS_HELP_ERROR_TYPES) or exc.__class__.__name__ == "NoArgsIsHelpError":
-                ctx = getattr(exc, "ctx", None)
-                format_message = getattr(exc, "format_message", None)
-                fallback = format_message() if callable(format_message) else str(exc)
-                click.echo(ctx.get_help() if ctx is not None else fallback)
-                sys.exit(0)
-            print_error_with_help(exc, prefix=self.error_prefix)
-            exit_code = getattr(exc, "exit_code", 2)
-            sys.exit(exit_code if isinstance(exit_code, int) else 2)
-        except _ABORT_TYPES:
-            click.echo("Aborted.", err=True)
-            sys.exit(1)
+        with SpooledOutput(
+            enabled=self.spool_large_output and output_spooling_enabled(),
+            line_limit=output_line_limit(self.output_line_limit),
+        ):
+            try:
+                result = super().main(
+                    args=args,
+                    prog_name=prog_name,
+                    complete_var=complete_var,
+                    standalone_mode=False,
+                    windows_expand_args=windows_expand_args,
+                    **extra,
+                )
+            except _CLICK_EXCEPTION_TYPES as exc:
+                if isinstance(exc, _NO_ARGS_IS_HELP_ERROR_TYPES) or exc.__class__.__name__ == "NoArgsIsHelpError":
+                    ctx = getattr(exc, "ctx", None)
+                    format_message = getattr(exc, "format_message", None)
+                    fallback = format_message() if callable(format_message) else str(exc)
+                    click.echo(ctx.get_help() if ctx is not None else fallback)
+                    sys.exit(0)
+                print_error_with_help(exc, prefix=self.error_prefix)
+                exit_code = getattr(exc, "exit_code", 2)
+                sys.exit(exit_code if isinstance(exit_code, int) else 2)
+            except _ABORT_TYPES:
+                click.echo("Aborted.", err=True)
+                sys.exit(1)
 
-        sys.exit(result if isinstance(result, int) else 0)
+            sys.exit(result if isinstance(result, int) else 0)
 
 
 class UnknownAsArgsGroup(TyperGroup):
