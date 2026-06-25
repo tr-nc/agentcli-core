@@ -55,7 +55,7 @@ class AgentFriendlyGroup(TyperGroup):
 
     error_prefix = "Error"
     spool_large_output = True
-    output_line_limit = 1000
+    output_line_limit = 500
 
     def main(
         self,

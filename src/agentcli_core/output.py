@@ -8,7 +8,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import TextIO
 
-DEFAULT_OUTPUT_LINE_LIMIT = 1000
+DEFAULT_OUTPUT_LINE_LIMIT = 500
 
 
 def _line_count(text: str) -> int:
