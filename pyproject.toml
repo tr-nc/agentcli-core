@@ -3,7 +3,7 @@
 #   [tool.uv.sources]
 #   agentcli-core = { path = "../agentcli-core", editable = true }
 # After the API stabilizes, switch callers to the remote source:
-#   agentcli-core = { git = "ssh://git@github.com/tr-nc/agentcli-core.git" }
+#   agentcli-core = { git = "https://github.com/tr-nc/agentcli-core.git" }
 
 [project]
 name = "agentcli-core"
