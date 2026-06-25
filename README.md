@@ -9,9 +9,28 @@ This is intentionally not a general CLI framework. It provides small, mechanical
 - secure local secret/config file reads and writes
 - portable compressed auth bundles
 - cross-platform clipboard copy/paste helpers
+- large-output spooling helpers, including machine-readable JSON spool pointers
 - small help/error formatting helpers
 
 Business logic stays in each CLI.
+
+## Large output spooling
+
+Use `SpooledOutput` when a CLI can produce large outputs in an agent session. By default, oversized output is written to a temp file and stdout/stderr receives a short pointer. If stdout is expected to be JSON, pass `stdout_content_type="json-auto"` (or `"json"` when the command guarantees JSON) so oversized JSON output is replaced by a valid JSON envelope instead of plain text:
+
+```python
+from agentcli_core.output import SpooledOutput, output_line_limit, output_spooling_enabled
+
+with SpooledOutput(
+    enabled=output_spooling_enabled(),
+    line_limit=output_line_limit(),
+    stdout_content_type="json-auto",
+    disable_on_redirect=True,
+):
+    run_cli()
+```
+
+`disable_on_redirect=True` preserves full original output for shell redirection such as `tool ... > out.json`.
 
 ## Agent-facing CLI contract
 
